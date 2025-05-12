@@ -1,11 +1,11 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import userController from '../controllers/userController';
 import { userService } from '../services/userService';
 
 const router = express.Router();
 
 // GET /api/users/check-email
-router.get('/check-email', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/check-email', async (req, res, next) => {
   try {
     const email = req.query.email as string;
     if (!email) {
@@ -19,7 +19,7 @@ router.get('/check-email', async (req: Request, res: Response, next: NextFunctio
 });
 
 // GET /users/current
-router.get('/current', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/current', async (req, res, next) => {
   try {
     await userController.getCurrentUser(req, res);
   } catch (error) {
@@ -28,7 +28,7 @@ router.get('/current', async (req: Request, res: Response, next: NextFunction) =
 });
 
 // PUT /edit-profile
-router.put('/edit-profile', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/edit-profile', async (req, res, next) => {
   try {
     await userController.updateUser(req, res);
   } catch (error) {
@@ -37,7 +37,7 @@ router.put('/edit-profile', async (req: Request, res: Response, next: NextFuncti
 });
 
 // PUT /users/:id/password
-router.put('/:id/password', async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id/password', async (req, res, next) => {
   try {
     await userController.changePassword(req, res);
   } catch (error) {
@@ -46,7 +46,7 @@ router.put('/:id/password', async (req: Request, res: Response, next: NextFuncti
 });
 
 // GET /user/:id
-router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', async (req, res, next) => {
   try {
     await userController.getProfile(req, res);
   } catch (error) {
