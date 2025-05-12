@@ -12,7 +12,7 @@ router.get('/check-email', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email parameter is required' });
     }
     const exists = await userService.emailExists(email);
-    return res.status(200).json({ success: true, data: { exists } });
+    res.status(200).json({ success: true, data: { exists } });
   } catch (err) {
     next(err);
   }
