@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
-
+import coachRoutes from './routes/coachRoutes';
 dotenv.config();
 
 const app: Application = express();
@@ -24,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('api/coaches', coachRoutes);
 
 // Root route
 app.get('/', (req: Request, res: Response) => {

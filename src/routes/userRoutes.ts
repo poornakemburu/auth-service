@@ -29,7 +29,7 @@ router.get('/current', (async (req: Request, res: Response, next: NextFunction) 
 }) as RequestHandler);
 
 // PUT /edit-profile
-router.put('/edit-profile', (async (req: Request, res: Response, next: NextFunction) => {
+router.put('/:id', (async (req: Request, res: Response, next: NextFunction) => {
   try {
     await userController.updateUser(req, res);
   } catch (error) {

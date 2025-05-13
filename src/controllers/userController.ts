@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { userService } from '../services/userService';
-import { validateSignup, validateUserUpdate } from '../utils/validation';
-import { sendResponse, sendErrorResponse } from '../utils/response';
+import { validateSignup } from '../utils/validation';
+import Coach from '../models/coach';
 
 const register = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -9,66 +9,79 @@ const register = async (req: Request, res: Response): Promise<Response> => {
     const validationResult = validateSignup(userData);
 
     if (!validationResult.isValid) {
-      return sendErrorResponse(res, 400, 'Validation failed', validationResult.errors);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationResult.errors
+      });
     }
 
     const emailExists = await userService.emailExists(userData.email);
     if (emailExists) {
-      return sendErrorResponse(res, 409, 'Email already exists. Please use a different email.');
+      return res.status(409).json({
+        success: false,
+        message: 'Email already exists. Please use a different email.'
+      });
     }
 
     const user = await userService.createUser(userData);
-    return sendResponse(res, 201, {
+    return res.status(201).json({
+      success: true,
       message: 'User registered successfully',
       user
     });
   } catch (error) {
     console.error('Error registering user:', error);
-    return sendErrorResponse(res, 500, 'Internal server error');
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 };
 
 const getCurrentUser = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.params.userId;
+    const userId = req.params.id;
     if (!userId) {
-      return sendErrorResponse(res, 400, 'Missing userId in path');
+      return res.status(400).json({ success: false, message: 'Missing userId in path' });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return sendErrorResponse(res, 404, 'User not found');
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    return sendResponse(res, 200, { user });
+    return res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Error fetching user:', error);
-    return sendErrorResponse(res, 500, 'Internal server error');
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 };
 
 const updateUser = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userData = req.body;
-
-    if (!userData.userId) {
-      return sendErrorResponse(res, 400, 'User ID is required');
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
     }
 
-    const validationResult = validateUserUpdate(userData);
-    if (!validationResult.isValid) {
-      return sendErrorResponse(res, 400, 'Validation failed', validationResult.errors);
-    }
+    const { firstName, lastName, preferableActivity, target } = req.body;
 
     const updatedUser = await userService.updateUser({
-      userId: userData.userId,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      ...(userData.preferableActivity && { preferableActivity: userData.preferableActivity }),
-      ...(userData.target && { target: userData.target })
+      userId,
+      firstName,
+      lastName,
+      ...(preferableActivity && { preferableActivity }),
+      ...(target && { target })
     });
 
-    return sendResponse(res, 200, {
+    return res.status(200).json({
+      success: true,
       message: 'Profile updated successfully',
       user: updatedUser
     });
@@ -76,56 +89,65 @@ const updateUser = async (req: Request, res: Response): Promise<Response> => {
     console.error('Error updating user:', error);
     const err = error as Error;
     const statusCode = err.message === 'User not found' ? 404 : 500;
-    return sendErrorResponse(res, statusCode, err.message || 'Failed to update profile');
+    return res.status(statusCode).json({
+      success: false,
+      message: err.message || 'Failed to update profile',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 };
 
 const getProfile = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const userId = req.params.userId;
+    const userId = req.params.id;
     if (!userId) {
-      return sendErrorResponse(res, 400, 'User ID is required');
+      return res.status(400).json({ success: false, message: 'User ID is required' });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return sendErrorResponse(res, 404, 'User not found');
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    return sendResponse(res, 200, { user });
+    return res.status(200).json({ success: true, user });
   } catch (error) {
     console.error('Error getting profile:', error);
-    return sendErrorResponse(res, 500, 'Failed to get profile');
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get profile',
+      error: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 };
 
 const changePassword = async (req: Request, res: Response): Promise<Response> => {
   try {
-    const { userId, currentPassword, newPassword } = req.body;
+    const userId = req.params.id;
+    const { currentPassword, newPassword } = req.body;
 
     if (!userId || !currentPassword || !newPassword) {
-      return sendErrorResponse(res, 400, 'All fields are required');
+      return res.status(400).json({ message: 'All fields are required' });
     }
 
     const user = await userService.getUserById(userId);
     if (!user) {
-      return sendErrorResponse(res, 404, 'User not found');
+      return res.status(404).json({ message: 'User not found' });
     }
 
     if (!user.id) {
-      return sendErrorResponse(res, 500, 'User ID is missing');
+      return res.status(500).json({ message: 'User ID is missing' });
     }
 
     const isPasswordValid = await userService.verifyPassword({ id: user.id }, currentPassword);
     if (!isPasswordValid) {
-      return sendErrorResponse(res, 401, 'Current password is incorrect');
+      return res.status(401).json({ message: 'Current password is incorrect' });
     }
 
     await userService.updatePassword(userId, newPassword);
-    return sendResponse(res, 200, { message: 'Password updated successfully' });
+    return res.status(200).json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Error changing password:', error);
-    return sendErrorResponse(res, 500, 'Failed to change password');
+    return res.status(500).json({ message: 'Failed to change password' });
   }
 };
 
